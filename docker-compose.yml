@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: monitoring_db
+    environment:
+      POSTGRES_DB: monitoring_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - monitoring_network
+
+  # Redis for rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: monitoring_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - monitoring_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: monitoring_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/monitoring_db
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
+      CORS_ORIGINS: '["http://localhost:3000", "http://frontend"]'
+      UPLOAD_DIR: ./uploads
+      DEFAULT_ADMIN_EMAIL: admin@monitor.com
+      DEFAULT_ADMIN_PASSWORD: Admin@123
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - monitoring_network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: monitoring_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - monitoring_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  monitoring_network:
+    driver: bridge
