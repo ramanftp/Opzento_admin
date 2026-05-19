@@ -8,7 +8,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from .core.config import settings
-from .core.database import engine, Base
+from .core.database import engine, Base, wait_for_db
 from .routes import auth_router, admin_router, data_router
 from .services.auth import create_default_admin
 from .services.cleanup import cleanup_old_performance_data, cleanup_old_photos
@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up...")
-    
+
+    # Wait for database service to be ready
+    await asyncio.to_thread(wait_for_db)
+
     # Create database tables
     Base.metadata.create_all(bind=engine)
     

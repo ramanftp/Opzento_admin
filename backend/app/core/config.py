@@ -4,12 +4,12 @@ import os
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+psycopg2://postgresql:postgresql@localhost:5432/monitoring_db"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@postgres:5432/monitoring_db"
     JWT_SECRET: str = "your-super-secret-jwt-key-change-this-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 24 * 60  # 24 hours
-    REDIS_URL: str = "redis://localhost:6379/0"
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5175"]
+    REDIS_URL: str = "redis://redis:6379/0"
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
     UPLOAD_DIR: str = "./uploads"
     DEFAULT_ADMIN_EMAIL: str = "admin@monitor.com"
     DEFAULT_ADMIN_PASSWORD: str = "admin123"
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     ODOO_DB_URL: str = "postgresql+psycopg2://odoo:odoo@localhost:5432/odoo_db"
     
     class Config:
-        env_file = "backend/.env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
 
 

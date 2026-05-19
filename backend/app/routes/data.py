@@ -7,7 +7,7 @@ import uuid
 from io import BytesIO
 from PIL import Image
 
-from backend.app.schemas.user import UserCreate, UserResponse, UserUpdate
+from ..schemas.user import UserCreate, UserResponse, UserUpdate
 from ..schemas.user_performance import UserPerformanceCreate, UserPerformanceResponse
 from ..core.database import get_db
 from ..core.config import settings
