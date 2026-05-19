@@ -61,8 +61,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: http://backend:8000
     container_name: monitoring_frontend
     ports:
       - "5173:80"
