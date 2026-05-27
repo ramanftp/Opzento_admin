@@ -199,3 +199,70 @@ async def get_user_performances_7_days(
     }
 
 
+@router.get("/users/{user_id}/performance")
+async def get_user_performance(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """Get performance data for a specific user for the last 7 days"""
+    
+    # Get the user
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Get performances from last 7 days for this user
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    performances = db.query(UserPerformance).filter(
+        UserPerformance.user_id == user.user_id,
+        UserPerformance.created_at >= seven_days_ago
+    ).order_by(UserPerformance.recorded_at.asc()).all()
+    
+    # Group by date and calculate daily averages
+    daily_data = {}
+    
+    for performance in performances:
+        performance_date = performance.recorded_at.date()
+        date_str = performance_date.strftime("%Y-%m-%d")
+        
+        if date_str not in daily_data:
+            daily_data[date_str] = {
+                "date": date_str,
+                "avg_performance": 0,
+                "total_idle_time": 0,
+                "total_focus_time": 0,
+                "count": 0
+            }
+        
+        daily_data[date_str]["avg_performance"] += performance.performance_percentage
+        daily_data[date_str]["total_idle_time"] += performance.idle_time_seconds
+        daily_data[date_str]["total_focus_time"] += performance.focus_time_seconds
+        daily_data[date_str]["count"] += 1
+    
+    # Calculate averages and convert to sorted list
+    result = []
+    for date_str in sorted(daily_data.keys()):
+        data = daily_data[date_str]
+        if data["count"] > 0:
+            result.append({
+                "date": date_str,
+                "avg_performance": round(data["avg_performance"] / data["count"], 2),
+                "total_idle_time": data["total_idle_time"],
+                "total_focus_time": data["total_focus_time"],
+                "count": data["count"]
+            })
+    
+    return {
+        "user_id": str(user.user_id),
+        "user_name": user.full_name,
+        "employee_id": user.employee_id,
+        "performance_data": result,
+        "date_range": "Last 7 days",
+        "generated_at": datetime.utcnow().isoformat()
+    }
+
+

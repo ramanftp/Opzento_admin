@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DEFAULT_ADMIN_PASSWORD: str = "admin123"
     SCREENSHOT_RETENTION_DAYS: int = 7
     RATE_LIMIT_PER_MINUTE: int = 60  # screenshots per minute per user
+    PORT: int = 8001
     
     # Odoo Integration Settings
     ODOO_DB_URL: str = "postgresql+psycopg2://odoo:odoo@localhost:5432/odoo_db"

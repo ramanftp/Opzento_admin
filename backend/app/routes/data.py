@@ -461,8 +461,10 @@ async def get_employee_photos_day_wise(
     employee_id = employee_id.replace("_", "/")
     try:
         # Get base URL for constructing absolute URLs
-        base_url = f"{request.url.scheme}://{request.url.netloc}"
-        
+        if request.url.scheme == "http":
+            base_url = f"{request.url.scheme}://{request.url.hostname}:{settings.PORT}"
+        else:
+            base_url = f"{request.url.scheme}://{request.url.netloc}"
         # Find user by employee_id or user_id
         user = db.query(User).filter(User.employee_id == employee_id).first()
         
