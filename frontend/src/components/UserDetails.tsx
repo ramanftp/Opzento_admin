@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Image as ImageIcon, Download, Calendar, Clock, User as UserIcon, Mail, Shield, Activity, ChevronDown, ChevronUp, X, ZoomIn } from 'lucide-react';
-import { userService, photoService } from '../services/api';
+import { ArrowLeft, AlertCircle, Image as ImageIcon, Download, Calendar, Clock, User as UserIcon, Mail, Shield, Activity, ChevronDown, ChevronUp, X, ZoomIn, TrendingUp } from 'lucide-react';
+import { userService, photoService, performanceService } from '../services/api';
 import type { User } from '../types/user';
 
 // Constants
@@ -42,6 +42,12 @@ interface DaySectionProps {
   hoveredImage: string | null;
   onHover: (url: string | null) => void;
   onDownload: (url: string) => void;
+}
+
+interface PerformanceData {
+  date: string;
+  originalDate: string;
+  performance: number;
 }
 
 // Utility functions
@@ -202,6 +208,7 @@ const UserDetails: React.FC = () => {
   
   const [user, setUser] = useState<User | null>(null);
   const [photosByDay, setPhotosByDay] = useState<Record<string, Photo[]>>({});
+  const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -252,6 +259,47 @@ const UserDetails: React.FC = () => {
         } catch (err) {
           console.warn('Photos not available:', err);
         }
+      }
+
+      // Load performance data for last 7 days
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const startDate = sevenDaysAgo.toISOString().split('T')[0];
+        const endDate = new Date().toISOString().split('T')[0];
+        
+        const perfData = await performanceService.getUserPerformance(parseInt(id), startDate, endDate);
+        
+        // Process performance data to get daily averages
+        const dailyPerformance: Record<string, number[]> = {};
+        if (perfData && perfData.performances) {
+          perfData.performances.forEach((p: any) => {
+            if (p.recorded_at && p.performance_percentage !== undefined && p.performance_percentage !== null) {
+              const date = new Date(p.recorded_at).toISOString().split('T')[0];
+              if (!dailyPerformance[date]) {
+                dailyPerformance[date] = [];
+              }
+              dailyPerformance[date].push(p.performance_percentage);
+            }
+          });
+        }
+
+        // Convert to array format for chart
+        const chartData: PerformanceData[] = Object.entries(dailyPerformance)
+          .map(([date, performances]) => {
+            const avgPerformance = performances.reduce((sum, val) => sum + val, 0) / performances.length;
+            return {
+              date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              originalDate: date,
+              performance: Math.round(avgPerformance * 100) / 100 // Round to 2 decimal places
+            };
+          })
+          .sort((a, b) => new Date(a.originalDate).getTime() - new Date(b.originalDate).getTime());
+
+        console.log('Performance chart data:', chartData);
+        setPerformanceData(chartData);
+      } catch (err) {
+        console.warn('Performance data not available:', err);
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to load user';
@@ -416,6 +464,99 @@ const UserDetails: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Performance Graph Section */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-3xl bg-slate-100 p-3 text-slate-700">
+              <TrendingUp className="w-5" />
+            </div>
+            <div>
+              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Performance</p>
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Last 7 Days
+              </h2>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-lg">
+              <p className="text-lg font-semibold text-slate-900">Loading performance data...</p>
+            </div>
+          ) : performanceData.length === 0 ? (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-lg">
+              <TrendingUp className="mx-auto h-16 w-16 mb-4 text-slate-400 opacity-50" />
+              <p className="text-lg font-semibold text-slate-900">No performance data available</p>
+              <p className="mt-2 text-sm text-slate-500">
+                This profile doesn't have any performance data for the last 7 days.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-lg">
+              <div className="relative h-96 flex items-end justify-between gap-6 px-6 pb-10">
+                {performanceData.map((data, index) => (
+                  <div key={`cylinder-${index}`} className="flex flex-col items-center gap-3 flex-1">
+                    <div className="text-sm font-semibold text-slate-900">
+                      {data.performance.toFixed(1)}%
+                    </div>
+                    <div className="relative w-full flex-1 flex items-end">
+                      {/* Cylinder body */}
+                      <div 
+                        className="w-full relative"
+                        style={{ height: `${Math.max(data.performance, 100)}%` }}
+                      >
+                        {/* Main cylinder body with 3D gradient */}
+                        <div 
+                          className="absolute inset-0 rounded-b-lg"
+                          style={{
+                            background: `linear-gradient(90deg, 
+                              #1e40af 0%, 
+                              #3b82f6 25%, 
+                              #60a5fa 50%, 
+                              #3b82f6 75%, 
+                              #1e40af 100%)`,
+                            boxShadow: 'inset -10px 0 20px rgba(0,0,0,0.3), inset 10px 0 20px rgba(255,255,255,0.2)'
+                          }}
+                        />
+                        {/* Left shadow for 3D effect */}
+                        <div 
+                          className="absolute left-0 top-0 bottom-0 w-1/3 rounded-l-lg opacity-50"
+                          style={{
+                            background: 'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, transparent 100%)'
+                          }}
+                        />
+                        {/* Right highlight for 3D effect */}
+                        <div 
+                          className="absolute right-0 top-0 bottom-0 w-1/4 rounded-r-lg opacity-30"
+                          style={{
+                            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 100%)'
+                          }}
+                        />
+                      </div>
+                      {/* Cylinder top (ellipse) */}
+                      <div 
+                        className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-full rounded-full"
+                        style={{
+                          height: '16px',
+                          background: `linear-gradient(90deg, 
+                            #1e40af 0%, 
+                            #3b82f6 25%, 
+                            #60a5fa 50%, 
+                            #3b82f6 75%, 
+                            #1e40af 100%)`,
+                          boxShadow: 'inset -3px 0 6px rgba(0,0,0,0.3), inset 3px 0 6px rgba(255,255,255,0.2)'
+                        }}
+                      />
+                    </div>
+                    <div className="text-sm text-slate-600 font-medium text-center truncate w-full">
+                      {data.date}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Photos Section */}
         <section className="space-y-6">

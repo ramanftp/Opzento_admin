@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60  # screenshots per minute per user
     PORT: int = 8001
     
+    # Cookie Settings
+    COOKIE_SECURE: bool = False  # Set to True for production (HTTPS)
+    COOKIE_SAMESITE: str = "lax"
+    
     # Odoo Integration Settings
     ODOO_DB_URL: str = "postgresql+psycopg2://odoo:odoo@localhost:5432/odoo_db"
     

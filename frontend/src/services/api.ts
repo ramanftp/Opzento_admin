@@ -8,9 +8,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable cookies
 });
 
-// Add auth token to requests
+// Add auth token to requests (fallback for non-cookie auth)
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -36,6 +37,10 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     const response = await api.post('/api/auth/login', { email, password });
+    // Store token in localStorage as fallback
+    if (response.data.access_token) {
+      localStorage.setItem('token', response.data.access_token);
+    }
     return response.data;
   },
 

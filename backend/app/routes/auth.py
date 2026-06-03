@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from ..core.database import get_db
-from ..core.security import verify_token
+from ..core.security import verify_token, verify_refresh_token
+from ..core.config import settings
 from ..schemas.user import UserLogin, UserResponse
 from ..schemas.auth import Token
 from ..services.auth import login_user, create_default_admin
 from ..models.user import User
 from typing import List, Optional
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 security = HTTPBearer()
@@ -72,7 +74,6 @@ def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
 
 
 
-
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """Get current active user (additional check for active status)"""
     if not current_user.is_active:
@@ -84,16 +85,28 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 
 
 @router.post("/login", response_model=dict)
-async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+async def login(user_credentials: UserLogin, response: Response, db: Session = Depends(get_db)):
     # Ensure default admin exists
     create_default_admin(db)
     
     result = login_user(db, user_credentials)
+    
+    # Set httpOnly cookie for access token
+    response.set_cookie(
+        key="access_token",
+        value=result["access_token"],
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=24 * 60 * 60  # 24 hours
+    )
+    
     return result
 
 
 @router.post("/logout")
-async def logout():
+async def logout(response: Response):
+    response.delete_cookie(key="access_token")
     return {"message": "Successfully logged out"}
 
 
@@ -103,6 +116,8 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         id=str(current_user.id),
         email=current_user.email,
         full_name=current_user.full_name,
+        employee_id=current_user.employee_id,
+        user_id=current_user.user_id,
         is_active=current_user.is_active,
         created_at=current_user.created_at,
         updated_at=current_user.updated_at
