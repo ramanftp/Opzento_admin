@@ -24,12 +24,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    console.error("API Error:", error.response?.data || error.message);
+
+    if (
+      error.response?.status === 401 &&
+      !window.location.pathname.includes("/login")
+    ) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
     }
-    throw error;
+
+    return Promise.reject(error);
   }
 );
 

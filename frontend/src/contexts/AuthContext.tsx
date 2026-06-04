@@ -19,20 +19,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-        setError(null);
-      } catch (err) {
-        localStorage.removeItem('token');
-        setError('Failed to load user');
-      }
-    }
+const checkAuth = useCallback(async () => {
+  setIsLoading(true);
+
+  const token = localStorage.getItem("token");
+
+  console.log("Token:", token);
+
+  if (!token) {
+    console.log("No token found");
+    setUser(null);
     setIsLoading(false);
-  }, []);
+    return;
+  }
+
+  try {
+    console.log("Calling /api/auth/me");
+
+    const currentUser = await authService.getCurrentUser();
+
+    console.log("Current User:", currentUser);
+
+    setUser(currentUser);
+    setError(null);
+  } catch (err: any) {
+    console.error("Auth check failed:", err);
+    console.error("Response:", err.response);
+
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      setUser(null);
+    }
+
+    setError(err.response?.data?.detail || "Failed to load user");
+  } finally {
+    setIsLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     checkAuth();
@@ -53,19 +76,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   }, []);
-
-  const logout = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      await authService.logout();
-      setUser(null);
-      setError(null);
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+const logout = useCallback(async () => {
+  try {
+    await authService.logout();
+  } catch (err) {
+    console.error('Logout error:', err);
+  } finally {
+    localStorage.removeItem('token');
+    setUser(null);
+    setError(null);
+  }
+}, []);
 
   const clearError = useCallback(() => {
     setError(null);
