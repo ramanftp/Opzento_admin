@@ -120,7 +120,7 @@ async def login(user_credentials: UserLogin, response: Response, db: Session = D
     cookie_domain = None
     
     if settings.is_production:
-        cookie_domain = '.opzento.com'  # Set domain for production
+        cookie_domain= "124.123.30.75:5173" # Set domain for production
         logger.info(f"Production environment detected. Setting cookie domain: {cookie_domain}, secure: True")
     else:
         logger.info(f"Development environment. secure={cookie_secure}")
@@ -145,7 +145,7 @@ async def logout(response: Response):
     # Determine domain based on environment
     cookie_domain = None
     if settings.CORS_ORIGINS and any('opzento.com' in origin for origin in settings.CORS_ORIGINS):
-        cookie_domain = '.opzento.com'
+        cookie_domain = '124.123.30.75:5173'
     
     response.delete_cookie(
         key="access_token",
