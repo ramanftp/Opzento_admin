@@ -50,12 +50,17 @@ def create_refresh_token(data: dict):
 
 
 def verify_token(token: str) -> dict:
+    import logging
+    logger = logging.getLogger(__name__)
     try:
+        logger.info(f"Verifying token with algorithm: {settings.JWT_ALGORITHM}")
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         email: str = payload.get("sub")
         token_type: str = payload.get("type")
+        logger.info(f"Token decoded successfully. Email: {email}, Type: {token_type}")
         
         if email is None:
+            logger.error("Email is None in token payload")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
@@ -63,6 +68,7 @@ def verify_token(token: str) -> dict:
             )
         
         if token_type != "access":
+            logger.error(f"Invalid token type: {token_type}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type",
@@ -70,7 +76,8 @@ def verify_token(token: str) -> dict:
             )
             
         return payload
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWTError during token verification: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     # Odoo Integration Settings
     ODOO_DB_URL: str = "postgresql+psycopg2://odoo:odoo@localhost:5432/odoo_db"
     
+    @property
+    def is_production(self) -> bool:
+        """Detect if running in production environment"""
+        return any('opzento.com' in origin for origin in self.CORS_ORIGINS)
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

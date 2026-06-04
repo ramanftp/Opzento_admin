@@ -26,8 +26,15 @@ def wait_for_db(retries: int = 10, delay: float = 2.0) -> None:
 
 
 def get_db():
+    import logging
+    logger = logging.getLogger(__name__)
     db = SessionLocal()
     try:
+        logger.info("Database session created")
         yield db
+    except Exception as e:
+        logger.error(f"Database session error: {str(e)}", exc_info=True)
+        raise
     finally:
         db.close()
+        logger.info("Database session closed")

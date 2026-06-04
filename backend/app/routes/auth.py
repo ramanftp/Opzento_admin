@@ -17,7 +17,11 @@ security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
     """Get the current authenticated user"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if not credentials or not credentials.credentials:
+        logger.error("No authentication credentials provided")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No authentication credentials provided",
@@ -26,36 +30,46 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     
     try:
         token = credentials.credentials
+        logger.info(f"Attempting to verify token for user")
         payload = verify_token(token)
         email = payload.get("sub")
+        logger.info(f"Token verified for email: {email}")
         
         if email is None:
+            logger.error("Email is None in token payload")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        logger.info(f"Querying database for user with email: {email}")
         user = db.query(User).filter(User.email == email).first()
         if user is None:
+            logger.error(f"User not found in database for email: {email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        logger.info(f"User found: {user.email}, is_active: {user.is_active}")
         if not user.is_active:
+            logger.error(f"User account is deactivated: {email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User account is deactivated",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        logger.info(f"Successfully authenticated user: {email}")
         return user
         
+    except HTTPException as e:
+        logger.error(f"HTTPException in get_current_user: {e.detail}")
+        raise
     except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
+        logger.error(f"Unexpected exception in get_current_user: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
@@ -86,41 +100,98 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 
 @router.post("/login", response_model=dict)
 async def login(user_credentials: UserLogin, response: Response, db: Session = Depends(get_db)):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Ensure default admin exists
     create_default_admin(db)
     
     result = login_user(db, user_credentials)
+    
+    # Determine cookie settings based on environment
+    cookie_secure = settings.COOKIE_SECURE or settings.is_production
+    cookie_domain = None
+    
+    if settings.is_production:
+        cookie_domain = '.opzento.com'  # Set domain for production
+        logger.info(f"Production environment detected. Setting cookie domain: {cookie_domain}, secure: True")
+    else:
+        logger.info(f"Development environment. secure={cookie_secure}")
     
     # Set httpOnly cookie for access token
     response.set_cookie(
         key="access_token",
         value=result["access_token"],
         httponly=True,
-        secure=settings.COOKIE_SECURE,
+        secure=cookie_secure,
         samesite=settings.COOKIE_SAMESITE,
-        max_age=24 * 60 * 60  # 24 hours
+        max_age=24 * 60 * 60,  # 24 hours
+        domain=cookie_domain
     )
     
+    logger.info(f"Login successful for user: {user_credentials.email}")
     return result
 
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie(key="access_token")
+    # Determine domain based on environment
+    cookie_domain = None
+    if settings.CORS_ORIGINS and any('opzento.com' in origin for origin in settings.CORS_ORIGINS):
+        cookie_domain = '.opzento.com'
+    
+    response.delete_cookie(
+        key="access_token",
+        domain=cookie_domain
+    )
     return {"message": "Successfully logged out"}
+
+
+@router.get("/health")
+async def auth_health(db: Session = Depends(get_db)):
+    """Check auth system health including database connectivity"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Test database connection
+        from ..models.user import User
+        user_count = db.query(User).count()
+        logger.info(f"Database connection OK. User count: {user_count}")
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "user_count": user_count,
+            "jwt_config": {
+                "algorithm": settings.JWT_ALGORITHM,
+                "secret_prefix": settings.JWT_SECRET[:10] + "..." if len(settings.JWT_SECRET) > 10 else settings.JWT_SECRET
+            }
+        }
+    except Exception as e:
+        logger.error(f"Auth health check failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Service unhealthy: {str(e)}"
+        )
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    return UserResponse(
-        id=str(current_user.id),
-        email=current_user.email,
-        full_name=current_user.full_name,
-        employee_id=current_user.employee_id,
-        user_id=current_user.user_id,
-        is_active=current_user.is_active,
-        created_at=current_user.created_at,
-        updated_at=current_user.updated_at
-    )
+    try:
+        return UserResponse(
+            id=str(current_user.id),
+            email=current_user.email,
+            full_name=current_user.full_name,
+            employee_id=current_user.employee_id,
+            user_id=current_user.user_id,
+            is_active=current_user.is_active,
+            created_at=current_user.created_at,
+            updated_at=current_user.updated_at
+        )
+    except Exception as e:
+        import logging
+        logging.error(f"Error in /me endpoint: {e}", exc_info=True)
+        raise
 
 
