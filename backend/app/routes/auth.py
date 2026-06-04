@@ -16,12 +16,20 @@ security = HTTPBearer()
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
-    """Get the current authenticated user"""
+    """Get the current authenticated user from Authorization header or cookie"""
+    from fastapi import Request
     import logging
     logger = logging.getLogger(__name__)
     
-    if not credentials or not credentials.credentials:
-        logger.error("No authentication credentials provided")
+    token = None
+    
+    # Try to get token from Authorization header first
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+        logger.info("Token found in Authorization header")
+    
+    if not token:
+        logger.error("No authentication credentials provided in Authorization header")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No authentication credentials provided",
@@ -29,7 +37,6 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
     
     try:
-        token = credentials.credentials
         logger.info(f"Attempting to verify token for user")
         payload = verify_token(token)
         email = payload.get("sub")
@@ -178,8 +185,18 @@ async def auth_health(db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        return UserResponse(
+        logger.info(f"Fetching user info for: {current_user.email}")
+        
+        # Ensure user has required fields
+        if not current_user.id or not current_user.created_at or not current_user.updated_at:
+            logger.error(f"User missing required fields: id={current_user.id}, created_at={current_user.created_at}, updated_at={current_user.updated_at}")
+            raise ValueError("User data incomplete")
+        
+        user_response = UserResponse(
             id=str(current_user.id),
             email=current_user.email,
             full_name=current_user.full_name,
@@ -187,11 +204,24 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
             user_id=current_user.user_id,
             is_active=current_user.is_active,
             created_at=current_user.created_at,
-            updated_at=current_user.updated_at
+            updated_at=current_user.updated_at,
+            screenshot_urls=None
+        )
+        
+        logger.info(f"Successfully returned user info for: {current_user.email}")
+        return user_response
+        
+    except ValueError as e:
+        logger.error(f"Validation error in /me endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Invalid user data: {str(e)}"
         )
     except Exception as e:
-        import logging
-        logging.error(f"Error in /me endpoint: {e}", exc_info=True)
-        raise
+        logger.error(f"Unexpected error in /me endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve user information"
+        )
 
 
