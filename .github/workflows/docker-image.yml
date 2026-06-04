@@ -9,7 +9,7 @@ jobs:
 deploy:
 runs-on: ubuntu-latest
 
-```
+
 steps:
   - name: Checkout Repository
     uses: actions/checkout@v4
@@ -32,4 +32,3 @@ steps:
         docker compose up -d --build
 
         docker image prune -f
-```
