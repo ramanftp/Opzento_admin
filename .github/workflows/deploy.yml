@@ -1,35 +1,33 @@
 name: Deploy Opzento Admin
 
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 
 jobs:
-deploy:
-runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd /opt/opzento-admin
 
-steps:
-  - name: Checkout Repository
-    uses: actions/checkout@v4
+            git fetch origin
+            git reset --hard origin/main
 
-  - name: Deploy to Server
-    uses: appleboy/ssh-action@v1.0.3
-    with:
-      host: ${{ secrets.SERVER_HOST }}
-      username: ${{ secrets.SERVER_USER }}
-      key: ${{ secrets.SERVER_SSH_KEY }}
-      port: 22
-      script: |
-        cd /opt/opzento-admin
+            docker compose down
+            docker compose pull || true
+            docker compose up -d --build
 
-        git fetch origin
-        git reset --hard origin/main
-
-        docker compose down
-        docker compose pull || true
-        docker compose up -d --build
-
-        docker image prune -f
+            docker image prune -f
