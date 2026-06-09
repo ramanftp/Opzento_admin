@@ -96,7 +96,7 @@ async def general_exception_handler(request, exc):
     )
 
 
-# Include routers
+# Include routersd
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(data_router)

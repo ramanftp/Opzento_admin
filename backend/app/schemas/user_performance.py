@@ -36,3 +36,18 @@ class UserPerformanceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class KeysResponse(BaseModel):
+    key: str
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class KeysCreate(BaseModel):
+    key: str
+
+    class Config:
+        from_attributes = True

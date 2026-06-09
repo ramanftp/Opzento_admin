@@ -8,10 +8,10 @@ from io import BytesIO
 from PIL import Image
 
 from ..schemas.user import UserCreate, UserResponse, UserUpdate
-from ..schemas.user_performance import UserPerformanceCreate, UserPerformanceResponse
+from ..schemas.user_performance import UserPerformanceCreate, UserPerformanceResponse, KeysResponse, KeysCreate
 from ..core.database import get_db
 from ..core.config import settings
-from ..models.user import User
+from ..models.user import User, Keys
 from ..models.user_performance import UserPerformance
 from ..routes.auth import get_current_admin, get_current_user
 
@@ -541,3 +541,69 @@ async def get_employee_photos_day_wise(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching photos: {str(e)}"
         )
+
+@router.get("/keys", response_model=list[KeysResponse])
+async def get_keys(
+    db: Session = Depends(get_db)
+):
+    """
+    Get all keys from the database
+    """
+    try:
+        keys = db.query(Keys).all()
+        return keys
+    except Exception as e:
+        print(f"Error in get_keys: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching keys: {str(e)}"
+        )
+
+@router.post("/keys")
+async def create_key(key: KeysCreate,
+ db: Session = Depends(get_db)
+):
+    """
+    Create a new key in the database
+    """
+
+    unique_key = db.query(Keys).filter(Keys.key == key.key).first()
+    if unique_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Key already exists"
+            )
+
+    try:
+        key_obj = Keys(key=key.key)
+        db.add(key_obj)
+        db.commit()
+        db.refresh(key_obj)
+        return {"message": "Key created successfully"}
+    except Exception as e:
+        print(f"Error in create_key: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating key: {str(e)}"
+        )
+@router.delete("/keys/{key_id}")       
+async def delete_key(key_id: int):
+    """
+    Delete a key from the database
+    """
+    try:
+        key = db.query(Keys).filter(Keys.id == key_id).first()
+        if not key:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Key not found"
+            )
+        db.delete(key)
+        db.commit()
+        return {"message": "Key deleted successfully"}
+    except Exception as e:
+        print(f"Error in delete_key: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting key: {str(e)}"
+        )       

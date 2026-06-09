@@ -30,3 +30,14 @@ class User(Base):
     def __repr__(self):
         
         return f"<User(email={self.email}, is_admin={self.is_admin})>"
+
+
+class Keys(Base):
+    __tablename__ = "keys"
+
+    id = Column(Integer, primary_key=True, autoincrement=True,unique=True, index=True)
+    key = Column(String(255), unique=True, index=True, nullable=False)
+
+    def __repr__(self):
+        
+        return f"<Keys(key={self.key})>"
