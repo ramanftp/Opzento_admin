@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     full_name: str
     employee_id: Optional[str] = None
     user_id: int
+    is_admin: bool = False
     screenshot_urls: Optional[list[str]] = None
     is_active: bool
     created_at: datetime

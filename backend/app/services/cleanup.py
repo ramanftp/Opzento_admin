@@ -4,6 +4,7 @@ from ..core.database import SessionLocal
 from ..models.user_performance import UserPerformance
 from ..core.config import settings
 import os
+import shutil
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,8 @@ def cleanup_old_photos():
     """Delete photo files older than retention period"""
     db = SessionLocal()
     try:
-        # Calculate cutoff date (default 180 days for photos)
-        retention_days = getattr(settings, 'PHOTO_RETENTION_DAYS', 180)
+        # Calculate cutoff date, defaulting to screenshot retention days if not explicitly configured
+        retention_days = getattr(settings, 'PHOTO_RETENTION_DAYS', settings.SCREENSHOT_RETENTION_DAYS)
         cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
         
         base_upload_dir = settings.UPLOAD_DIR
@@ -129,7 +130,6 @@ def cleanup_old_photos():
             "cutoff_date": cutoff_date.isoformat(),
             "retention_days": retention_days
         }
-        
     except Exception as e:
         logger.error(f"Photo cleanup failed: {e}")
         return {
@@ -137,3 +137,28 @@ def cleanup_old_photos():
         }
     finally:
         db.close()
+
+def delete_user_photos(user):
+    """Remove user-related photo files from uploads."""
+    base_upload_dir = settings.UPLOAD_DIR
+    photos_dir = os.path.join(base_upload_dir, "photos")
+    employee_code = (user.employee_id or str(user.id)).replace("/", "_")
+    user_photo_dir = os.path.abspath(os.path.join(photos_dir, employee_code))
+    allowed_base = os.path.abspath(photos_dir)
+
+    if not user_photo_dir.startswith(allowed_base):
+        raise ValueError("Invalid user photo directory")
+
+    if os.path.exists(user_photo_dir) and os.path.isdir(user_photo_dir):
+        shutil.rmtree(user_photo_dir)
+        return {
+            "deleted": True,
+            "path": user_photo_dir
+        }
+
+    return {
+        "deleted": False,
+        "path": user_photo_dir
+    }
+        
+

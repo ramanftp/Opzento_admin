@@ -587,7 +587,7 @@ async def create_key(key: KeysCreate,
             detail=f"Error creating key: {str(e)}"
         )
 @router.delete("/keys/{key_id}")       
-async def delete_key(key_id: int):
+async def delete_key(key_id: int, db: Session = Depends(get_db)):
     """
     Delete a key from the database
     """
@@ -603,6 +603,10 @@ async def delete_key(key_id: int):
         return {"message": "Key deleted successfully"}
     except Exception as e:
         print(f"Error in delete_key: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting key: {str(e)}"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting key: {str(e)}"

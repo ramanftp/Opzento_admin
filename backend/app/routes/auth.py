@@ -202,6 +202,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
             full_name=current_user.full_name,
             employee_id=current_user.employee_id,
             user_id=current_user.user_id,
+            is_admin=current_user.is_admin,
             is_active=current_user.is_active,
             created_at=current_user.created_at,
             updated_at=current_user.updated_at,

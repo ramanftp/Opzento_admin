@@ -503,7 +503,7 @@ const UserDetails: React.FC = () => {
                       {/* Cylinder body */}
                       <div 
                         className="w-full relative"
-                        style={{ height: `${Math.max(data.performance, 100)}%` }}
+                        style={{ height: `${Math.max(data.performance, 5)}%` }}
                       >
                         {/* Main cylinder body with 3D gradient */}
                         <div 

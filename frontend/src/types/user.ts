@@ -39,3 +39,8 @@ export interface UserPerformanceCreate {
   recorded_at: string;
 }
 
+export interface KeyItem {
+  id: number;
+  key: string;
+}
+

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, AuthResponse, UserPerformance, UserPerformanceCreate } from '../types/user';
+import type { User, AuthResponse, UserPerformance, UserPerformanceCreate, KeyItem } from '../types/user';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -84,6 +84,22 @@ export const userService = {
   updateUser: async (id: string, data: Partial<User>): Promise<User> => {
     const response = await api.put(`/api/admin/users/${id}`, data);
     return response.data;
+  },
+};
+
+// Key Service
+export const keyService = {
+  getKeys: async (): Promise<KeyItem[]> => {
+    const response = await api.get('/api/data/keys');
+    return response.data;
+  },
+
+  createKey: async (data: { key: string }): Promise<void> => {
+    await api.post('/api/data/keys', data);
+  },
+
+  deleteKey: async (id: number): Promise<void> => {
+    await api.delete(`/api/data/keys/${id}`);
   },
 };
 

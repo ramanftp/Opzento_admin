@@ -8,6 +8,7 @@ from ..models.user import User
 from ..models.user_performance import UserPerformance
 from ..schemas.user import UserResponse
 from ..routes.auth import get_current_admin
+from ..services.cleanup import delete_user_photos
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -31,6 +32,7 @@ async def get_users(
             full_name=user.full_name,
             user_id=user.user_id or 1,
             employee_id=user.employee_id,
+            is_admin=user.is_admin,
             is_active=user.is_active,
             created_at=user.created_at,
             updated_at=user.updated_at
@@ -58,6 +60,7 @@ async def get_user(
         full_name=user.full_name,
         user_id=user.user_id or 1,
         employee_id=user.employee_id,
+        is_admin=user.is_admin,
         is_active=user.is_active,
         created_at=user.created_at,
         updated_at=user.updated_at
@@ -84,7 +87,13 @@ async def delete_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot delete yourself"
         )
-    
+
+    try:
+        delete_user_photos(user)
+    except Exception:
+        # Continue deleting the user even if photo cleanup fails.
+        pass
+
     db.delete(user)
     db.commit()
     

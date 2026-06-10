@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, User as UserIcon, Users, Search, Loader } from 'lucide-react';
+import { LogOut, User as UserIcon, Users, Search, Loader, Key } from 'lucide-react';
 import { userService } from '../services/api';
 import type { User } from '../types/user';
 
@@ -69,7 +69,6 @@ const Dashboard: React.FC = () => {
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-slate-400">CRM Dashboard</p>
                 <h1 className="text-2xl font-semibold text-slate-900">User Management</h1>
               </div>
             </div>
@@ -83,6 +82,13 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-slate-500">{user?.email}</p>
                 </div>
               </div>
+              <button
+                onClick={() => navigate('/keys')}
+                className="inline-flex items-center justify-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+              >
+                <Key className="h-4 w-4" />
+                Keys
+              </button>
               <button
                 onClick={handleLogout}
                 className="inline-flex items-center justify-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
