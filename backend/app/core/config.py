@@ -4,7 +4,7 @@ import os
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@postgres:5432/monitoring_db"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:srivyn@srivyn:5432/monitoring_db"
     JWT_SECRET: str = "your-super-secret-jwt-key-change-this-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 24 * 60  # 24 hours
