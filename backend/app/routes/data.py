@@ -586,6 +586,8 @@ async def create_key(key: KeysCreate,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating key: {str(e)}"
         )
+
+        
 @router.delete("/keys/{key_id}")       
 async def delete_key(key_id: int, db: Session = Depends(get_db)):
     """
