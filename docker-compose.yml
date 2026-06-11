@@ -7,17 +7,10 @@ services:
     container_name: monitoring_db
     environment:
       POSTGRES_DB: monitoring_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5434:5432"
+      POSTGRES_USER: srivyn
+      POSTGRES_PASSWORD: "srivyn"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d monitoring_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     networks:
       - monitoring_network
 
@@ -39,7 +32,7 @@ services:
       dockerfile: Dockerfile
     container_name: monitoring_backend
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/monitoring_db
+      DATABASE_URL: postgresql+psycopg2://srivyn:srivyn@postgres:5432/monitoring_db
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
       CORS_ORIGINS: '["http://localhost:5173", "http://frontend", "http://admin.opzento.com", "https://admin.opzento.com"]'
